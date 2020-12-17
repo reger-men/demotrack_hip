@@ -5,8 +5,7 @@
 #include <string>
 #include <vector>
 
-#include <cuda.h>
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
 
 #include "definitions.h"
 #include "particle.h"
@@ -28,14 +27,14 @@ __global__ void Track_particles_until_turn(
 
     for( ; idx < num_particles ; idx += STRIDE )
     {
-        dt::Particle p = particle_set[ idx ];
-        dt::uint64_type const start_at_element = p.at_element;
+        dt::Particle* __restrict__ p = &particle_set[ idx ];
+        dt::uint64_type const start_at_element = p->at_element;
 
-        while( ( p.state == 1 ) && ( p.at_turn < until_turn ) )
+        while( ( p->state == 1 ) && ( p->at_turn < until_turn ) )
         {
             dt::uint64_type slot_idx = 0;
 
-            while( ( p.state == 1 ) && ( slot_idx < max_lattice_buffer_index ) )
+            while( ( p->state == 1 ) && ( slot_idx < max_lattice_buffer_index ) )
             {
                 /* all elements are stored with their type_id as the first
                  * data member -> retrieve this number and dispatch
@@ -52,9 +51,9 @@ __global__ void Track_particles_until_turn(
                             ( dt::Drift const* )&lattice_buffer[ slot_idx ];
 
                         dt::uint64_type const next_slot_idx =
-                            elem->track( p, slot_idx );
+                            elem->track( *p, slot_idx );
 
-                        dt::Drift::GLOBAL_APERTURE_CHECK( p );
+                        dt::Drift::GLOBAL_APERTURE_CHECK( *p );
                         slot_idx = next_slot_idx;
                         break;
                     }
@@ -65,10 +64,10 @@ __global__ void Track_particles_until_turn(
                             ( dt::DriftExact const* )&lattice_buffer[ slot_idx ];
 
                         dt::uint64_type const next_slot_idx =
-                            elem->track( p, slot_idx );
+                            elem->track( *p, slot_idx );
 
                         // Use GLOBAL_APERTURE_CHECK from Drift -> it's the same
-                        dt::Drift::GLOBAL_APERTURE_CHECK( p );
+                        dt::Drift::GLOBAL_APERTURE_CHECK( *p );
                         slot_idx = next_slot_idx;
                         break;
                     }
@@ -79,7 +78,7 @@ __global__ void Track_particles_until_turn(
                             ( dt::Multipole const* )&lattice_buffer[ slot_idx ];
 
                         dt::uint64_type const next_slot_idx =
-                            elem->track( p, slot_idx );
+                            elem->track( *p, slot_idx );
 
                         slot_idx = next_slot_idx;
                         break;
@@ -91,7 +90,7 @@ __global__ void Track_particles_until_turn(
                             ( dt::XYShift const* )&lattice_buffer[ slot_idx ];
 
                         dt::uint64_type const next_slot_idx =
-                            elem->track( p, slot_idx );
+                            elem->track( *p, slot_idx );
 
                         slot_idx = next_slot_idx;
                         break;
@@ -103,7 +102,7 @@ __global__ void Track_particles_until_turn(
                             ( dt::SRotation const* )&lattice_buffer[ slot_idx ];
 
                         dt::uint64_type const next_slot_idx =
-                            elem->track( p, slot_idx );
+                            elem->track( *p, slot_idx );
 
                         slot_idx = next_slot_idx;
                         break;
@@ -115,14 +114,14 @@ __global__ void Track_particles_until_turn(
                             ( dt::Cavity const* )&lattice_buffer[ slot_idx ];
 
                         dt::uint64_type const next_slot_idx =
-                            elem->track( p, slot_idx );
+                            elem->track( *p, slot_idx );
 
                         slot_idx = next_slot_idx;
                         break;
                     }
 
                     #if defined( DEMOTRACK_ENABLE_BEAMFIELDS ) && \
-                        DEMOTRACK_ENABLE_BEAMFIELDS == 1
+                        ( DEMOTRACK_ENABLE_BEAMFIELDS == 1 )
 
                     case dt::BEAM_ELEMENT_SC_COASTING: // cf. beamfields.h
                     {
@@ -130,7 +129,7 @@ __global__ void Track_particles_until_turn(
                             ( dt::SpaceChargeCoasting const* )&lattice_buffer[ slot_idx ];
 
                         dt::uint64_type const next_slot_idx =
-                            elem->track( p, slot_idx );
+                            elem->track( *p, slot_idx );
 
                         slot_idx = next_slot_idx;
                         break;
@@ -141,21 +140,19 @@ __global__ void Track_particles_until_turn(
                     default:
                     {
                         /* unknown beam element -> loose particle and quit */
-                        p.state = 0;
+                        p->state = 0;
                         slot_idx = max_lattice_buffer_index;
                     }
                 };
 
             }
 
-            if( p.state == 1 )
+            if( p->state == 1 )
             {
-                p.at_element = start_at_element;
-                ++p.at_turn;
+                p->at_element = start_at_element;
+                ++p->at_turn;
             }
         }
-
-        particle_set[ idx ] = p;
     }
 }
 
@@ -214,25 +211,25 @@ int main( int argc, char* argv[] )
     dt::Particle* particles_dev = nullptr;
     double* lattice_dev = nullptr;
 
-    auto status = ::cudaMalloc( ( void** )&particles_dev,
+    auto status = ::hipMalloc( ( void** )&particles_dev,
         sizeof( dt::Particle ) * NUM_PARTICLES );
-    assert( status == CUDA_SUCCESS );
+    assert( status == hipSuccess );
 
-    status = ::cudaMalloc( ( void** )&lattice_dev,
+    status = ::hipMalloc( ( void** )&lattice_dev,
         LATTICE_SIZE * sizeof( double ) );
-    assert( status == CUDA_SUCCESS );
+    assert( status == hipSuccess );
 
     /* Copy particle and lattice data to device */
 
-    status = ::cudaMemcpy( lattice_dev, &fodo_lattice[ 0 ],
-        LATTICE_SIZE * sizeof( double ), ::cudaMemcpyHostToDevice );
-    assert( status == CUDA_SUCCESS );
+    status = ::hipMemcpy( lattice_dev, &fodo_lattice[ 0 ],
+        LATTICE_SIZE * sizeof( double ), ::hipMemcpyHostToDevice );
+    assert( status == hipSuccess );
 
-    status = ::cudaMemcpy( particles_dev, particles_host.data(),
+    status = ::hipMemcpy( particles_dev, particles_host.data(),
         particles_host.size() * sizeof( dt::Particle ),
-            ::cudaMemcpyHostToDevice );
+            ::hipMemcpyHostToDevice );
 
-    assert( status == CUDA_SUCCESS );
+    assert( status == hipSuccess );
 
     /* ******************************************************************** */
     /* Estimate block size */
@@ -240,14 +237,14 @@ int main( int argc, char* argv[] )
     int BLOCK_SIZE = 0;
     int MIN_GRID_SIZE = 0;
 
-    status = ::cudaOccupancyMaxPotentialBlockSize(
+    status = ::hipOccupancyMaxPotentialBlockSize(
         &MIN_GRID_SIZE, /* -> minimum grid size needed for max occupancy */
         &BLOCK_SIZE, /* -> estimated optimal block size */
         Track_particles_until_turn, /* the kernel */
         0u, /* -> dynamic shared memory per block required [bytes] */
         0u /* -> max block size limit for the kernel; 0 == no limit */ );
 
-    assert( status == CUDA_SUCCESS );
+    assert( status == hipSuccess );
 
     assert( BLOCK_SIZE > 0 );
     int const GRID_SIZE = ( NUM_PARTICLES + BLOCK_SIZE - 1 ) / BLOCK_SIZE;
@@ -255,13 +252,13 @@ int main( int argc, char* argv[] )
     /* ******************************************************************** */
     /* Run kernel: */
 
-    ::cudaDeviceProp props;
+    ::hipDeviceProp_t props;
     int device = 0;
-    status = ::cudaGetDevice( &device );
-    assert( status == CUDA_SUCCESS );
+    status = ::hipGetDevice( &device );
+    assert( status == hipSuccess );
 
-    status = ::cudaGetDeviceProperties( &props, device );
-    assert( status == CUDA_SUCCESS );
+    status = ::hipGetDeviceProperties( &props, device );
+    assert( status == hipSuccess );
 
     char pci_bus_id_str[] =
     {
@@ -271,8 +268,8 @@ int main( int argc, char* argv[] )
         '\0', '\0', '\0', '\0', '\0', '\0', '\0', '\0'
     };
 
-    status = ::cudaDeviceGetPCIBusId( pci_bus_id_str, 32, device );
-    assert( status == CUDA_SUCCESS );
+    status = ::hipDeviceGetPCIBusId( pci_bus_id_str, 32, device );
+    assert( status == hipSuccess );
 
     std::cout << "number of particles   : " << NUM_PARTICLES << "\r\n"
               << "number of turns       : " << TRACK_UNTIL_TURN << "\r\n";
@@ -290,35 +287,35 @@ int main( int argc, char* argv[] )
 
     /* Prepare cuda events to estimate the elapsed wall time */
 
-    ::cudaEvent_t start;
-    status = ::cudaEventCreate( &start );
-    assert( status == CUDA_SUCCESS );
+    ::hipEvent_t start;
+    status = ::hipEventCreate( &start );
+    assert( status == hipSuccess );
 
-    ::cudaEvent_t stop;
-    status = ::cudaEventCreate( &stop );
-    assert( status == CUDA_SUCCESS );
+    ::hipEvent_t stop;
+    status = ::hipEventCreate( &stop );
+    assert( status == hipSuccess );
 
-    status = ::cudaEventRecord( start );
-    assert( status == CUDA_SUCCESS );
+    status = ::hipEventRecord( start );
+    assert( status == hipSuccess );
 
     /* Run kernel */
 
-    Track_particles_until_turn<<< GRID_SIZE, BLOCK_SIZE >>>(
+    hipLaunchKernelGGL(Track_particles_until_turn, dim3(GRID_SIZE), dim3(BLOCK_SIZE ), 0, 0,
         particles_dev, NUM_PARTICLES, lattice_dev, LATTICE_SIZE,
             TRACK_UNTIL_TURN );
-    status = ::cudaDeviceSynchronize();
+    status = ::hipDeviceSynchronize();
 
     /* Estimate wall time */
 
-    status = ::cudaEventRecord( stop );
-    assert( status == CUDA_SUCCESS );
+    status = ::hipEventRecord( stop );
+    assert( status == hipSuccess );
 
-    status = ::cudaEventSynchronize( stop );
-    assert( status == CUDA_SUCCESS );
+    status = ::hipEventSynchronize( stop );
+    assert( status == hipSuccess );
 
     float wtime = 0.0;
-    status = ::cudaEventElapsedTime( &wtime, start, stop );
-    assert( status == CUDA_SUCCESS );
+    status = ::hipEventElapsedTime( &wtime, start, stop );
+    assert( status == hipSuccess );
 
     std::cout << "-------------------------------------------------------\r\n"
               << "Elapsed time          : " << wtime << " msec total \r\n"
@@ -329,10 +326,10 @@ int main( int argc, char* argv[] )
 
     /* Fetch data */
 
-    status = ::cudaMemcpy( particles_host.data(), particles_dev,
+    status = ::hipMemcpy( particles_host.data(), particles_dev,
                            particles_host.size() * sizeof( dt::Particle ),
-                           ::cudaMemcpyDeviceToHost );
-    assert( status == CUDA_SUCCESS );
+                           ::hipMemcpyDeviceToHost );
+    assert( status == hipSuccess );
 
     /* ********************************************************************* */
     /* Verify tracking results */
@@ -367,15 +364,14 @@ int main( int argc, char* argv[] )
     /* ********************************************************************* */
     /* Cleaning up, Freeing resources */
 
-    ::cudaFree( lattice_dev );
+    ::hipFree( lattice_dev );
     lattice_dev = nullptr;
 
-    ::cudaFree( particles_dev );
+    ::hipFree( particles_dev );
     particles_dev = nullptr;
 
-    ::cudaEventDestroy( start );
-    ::cudaEventDestroy( stop );
+    ::hipEventDestroy( start );
+    ::hipEventDestroy( stop );
 
     return 0;
 }
-

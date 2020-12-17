@@ -1,7 +1,7 @@
 #ifndef DEMOTRACK_CUDA_DEFINITIONS_H__
 #define DEMOTRACK_CUDA_DEFINITIONS_H__
 
-#include <cuda_runtime.h>
+#include <hip/hip_runtime.h>
 
 #if defined( __APPLE__ ) && __APPLE__
     #include <TargetConditionals.h>

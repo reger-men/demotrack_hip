@@ -2,7 +2,7 @@
 #define DEMOTRACK_CUDA_BEAM_ELEMENTS_H__
 
 #include <cmath>
-#include <cuda.h>
+#include <hip/hip_runtime.h>
 
 #include "definitions.h"
 #include "particle.h"
