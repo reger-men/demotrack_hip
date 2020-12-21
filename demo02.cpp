@@ -12,7 +12,7 @@
 #include "particle.h"
 #include "beam_elements.h"
 #include "beamfields.h"
-#include "fodo_lattice.h"
+#include "lattice.h"
 
 __global__ void Track_particles_until_turn(
     demotrack::Particle* particle_set,
