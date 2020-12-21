@@ -1,6 +1,17 @@
 cmake_minimum_required( VERSION 3.11 FATAL_ERROR )
 project( demotrack_cuda_cxx LANGUAGES C CXX )
 
+option( USE_BLOCKSIZE_CALCULATOR "Use blocksize calculator" OFF )
+set( DEMOTRACK_DEFAULT_BLOCK_SIZE "512" CACHE STRING "Default grid block size" )
+
+if( USE_BLOCKSIZE_CALCULATOR )
+    set( DEMOTRACK_USE_BLOCKSIZE_CALCULATOR "1" )
+else()
+    set( DEMOTRACK_USE_BLOCKSIZE_CALCULATOR "0" )
+endif()
+
+configure_file( config.h.template ${CMAKE_SOURCE_DIR}/config.h @ONLY )
+
 # -------------------------------------------------------------------------------
 # Enable CUDA support
 
@@ -34,12 +45,15 @@ include_directories( ${CMAKE_SOURCE_DIR} )
 # ------------------------------------------------------------------------------
 # demo01: particles stored in global memory, lattice stored in global memory
 
+set( COMMON_HEADERS definitions.h beam_elements.h beamfields.h config.h
+                    lattice.h particle.h )
+
 set( HIP_NVCC_FLAGS "-arch=${CUDA_SM_ARCH};-fmad=false;-lineinfo;-D_FORCE_INLINES" )
 
-HIP_ADD_EXECUTABLE( demo01_sc0 demo01.cpp )
+HIP_ADD_EXECUTABLE( demo01_sc0 demo01.cpp ${COMMON_HEADERS} )
 target_link_libraries( demo01_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
 
-HIP_ADD_EXECUTABLE( demo02_sc0 demo02.cpp )
+HIP_ADD_EXECUTABLE( demo02_sc0 demo02.cpp ${COMMON_HEADERS} )
 target_link_libraries( demo02_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
 
 # ------------------------------------------------------------------------------
@@ -50,9 +64,9 @@ target_link_libraries( demo02_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
 set( HIP_NVCC_FLAGS "-arch=${CUDA_SM_ARCH};-fmad=false;-lineinfo;-D_FORCE_INLINES" )
 set( HIP_NVCC_FLAGS "${HIP_NVCC_FLAGS};-DDEMOTRACK_ENABLE_BEAMFIELDS" )
 
-HIP_ADD_EXECUTABLE( demo01_sc1 demo01.cpp )
+HIP_ADD_EXECUTABLE( demo01_sc1 demo01.cpp ${COMMON_HEADERS} )
 target_link_libraries( demo01_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
 
-HIP_ADD_EXECUTABLE( demo02_sc1 demo02.cpp )
+HIP_ADD_EXECUTABLE( demo02_sc1 demo02.cpp ${COMMON_HEADERS} )
 target_link_libraries( demo02_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
 

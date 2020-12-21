@@ -8,6 +8,7 @@
 #include <hip/hip_runtime.h>
 
 #include "definitions.h"
+#include "config.h"
 #include "particle.h"
 #include "beam_elements.h"
 #include "beamfields.h"
@@ -167,6 +168,7 @@ int main( int argc, char* argv[] )
 
     dt::uint64_type NUM_PARTICLES = 50 * 1024;
     dt::int64_type  TRACK_UNTIL_TURN = 1000;
+    std::string path_to_lattice_data = std::string{};
 
     if( argc >= 2 )
     {
@@ -175,13 +177,19 @@ int main( int argc, char* argv[] )
         if( argc >= 3 )
         {
             TRACK_UNTIL_TURN = std::stoi( argv[ 2 ] );
+
+            if( argc >= 4 )
+            {
+                path_to_lattice_data = std::string{ argv[ 3 ] };
+            }
         }
     }
     else
     {
         std::cout << "Usage : " << argv[ 0 ]
-                  << " [NUM_PARTICLES] [TRACK_UNTIL_TURN]\r\n"
-                  << std::endl;
+                  << " [NUM_PARTICLES] [TRACK_UNTIL_TURN]"
+                  << " [PATH_TO_LATTICE_DATA]"
+                  << std::endl << std::endl;
     }
 
     double const P0_C    = 470e9;  /* Kinetic energy, [eV]  */
@@ -201,11 +209,9 @@ int main( int argc, char* argv[] )
     /* ********************************************************************* */
     /* Prepare lattice / machine description: */
 
-    double fodo_lattice[ 200 ];
-
-    /* see fodo_lattice.h for the implementation of create_fodo_lattice */
-    dt::uint64_type const LATTICE_SIZE =
-        dt::create_fodo_lattice( &fodo_lattice[ 0 ], 200u );
+    std::vector< double > lattice_host;
+    dt::uint64_type const LATTICE_SIZE = dt::load_lattice(
+        lattice_host, path_to_lattice_data );
 
     /* ********************************************************************** */
     /* Allocate buffers on the device */
@@ -223,7 +229,7 @@ int main( int argc, char* argv[] )
 
     /* Copy particle and lattice data to device */
 
-    status = ::hipMemcpy( lattice_dev, &fodo_lattice[ 0 ],
+    status = ::hipMemcpy( lattice_dev, lattice_host.data(),
         LATTICE_SIZE * sizeof( double ), ::hipMemcpyHostToDevice );
     assert( status == hipSuccess );
 
@@ -239,12 +245,28 @@ int main( int argc, char* argv[] )
     int BLOCK_SIZE = 0;
     int MIN_GRID_SIZE = 0;
 
+    #if defined( DEMOTRACK_HIP_CALCULATE_BLOCKSIZE ) && \
+        ( DEMOTRACK_HIP_CALCULATE_BLOCKSIZE == 1 )
+
     status = ::hipOccupancyMaxPotentialBlockSize(
         &MIN_GRID_SIZE, /* -> minimum grid size needed for max occupancy */
         &BLOCK_SIZE, /* -> estimated optimal block size */
         Track_particles_until_turn, /* the kernel */
         0u, /* -> dynamic shared memory per block required [bytes] */
         0u /* -> max block size limit for the kernel; 0 == no limit */ );
+
+    assert( status == hipSuccess );
+
+    #elif defined( DEMOTRACK_DEFAULT_BLOCK_SIZE ) && \
+         ( DEMOTRACK_DEFAULT_BLOCK_SIZE > 0 )
+
+    BLOCK_SIZE = DEMOTRACK_DEFAULT_BLOCK_SIZE;
+
+    #else
+
+    BLOCK_SIZE = 1;
+
+    #endif /* DEMOTRACK_HIP_CALCULATE_BLOCKSIZE */
 
     assert( status == hipSuccess );
 
@@ -276,7 +298,17 @@ int main( int argc, char* argv[] )
     std::cout << "number of particles   : " << NUM_PARTICLES << "\r\n"
               << "number of turns       : " << TRACK_UNTIL_TURN << "\r\n";
 
-    #if defined( DEMOTRACK_ENABLE_BEAMFIELDS ) && DEMOTRACK_ENABLE_BEAMFIELDS == 1
+    if( !path_to_lattice_data.empty() )
+    {
+        std::cout << "lattice               : "
+                  << path_to_lattice_data << "\r\n";
+    }
+    else
+    {
+        std::cout << "lattice               : generated fodo lattice\r\n";
+    }
+
+    #if defined( DEMOTRACK_ENABLE_BEAMFIELDS ) && ( DEMOTRACK_ENABLE_BEAMFIELDS == 1 )
     std::cout << "space-charge enabled  : true\r\n";
     #else
     std::cout << "space-charge enabled  : false\r\n";
