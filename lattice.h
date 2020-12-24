@@ -2,6 +2,9 @@
 #define DEMOTRACK_HIP_FODO_LATTICE_H__
 
 #include <algorithm>
+#include <cstdio>
+#include <string>
+#include <vector>
 
 #include "definitions.h"
 #include "beam_elements.h"
