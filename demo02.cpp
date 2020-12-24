@@ -169,6 +169,7 @@ int main( int argc, char* argv[] )
     dt::uint64_type NUM_PARTICLES = 50 * 1024;
     dt::int64_type  TRACK_UNTIL_TURN = 1000;
     std::string path_to_lattice_data = std::string{};
+    std::string path_to_particle_data = std::string{};
 
     if( argc >= 2 )
     {
@@ -180,7 +181,12 @@ int main( int argc, char* argv[] )
 
             if( argc >= 4 )
             {
-                path_to_lattice_data = std::string{ argv[ 3 ] };
+                path_to_particle_data = std::string{ argv[ 3 ] };
+
+                if( argc >= 5 )
+                {
+                    path_to_lattice_data = std::string{ argv[ 4 ] };
+                }
             }
         }
     }
@@ -188,23 +194,15 @@ int main( int argc, char* argv[] )
     {
         std::cout << "Usage : " << argv[ 0 ]
                   << " [NUM_PARTICLES] [TRACK_UNTIL_TURN]"
-                  << " [PATH_TO_LATTICE_DATA]"
-                  << std::endl << std::endl;
+                  << " [PATH_TO_PARTICLE_DATA] [PATH_TO_LATTICE_DATA]\r\n"
+                  << std::endl;
     }
 
-    double const P0_C    = 470e9;  /* Kinetic energy, [eV]  */
-    double const MASS0   = 938.272081e6; /* Proton rest mass, [eV] */
-    double const CHARGE0 = 1.0; /* Reference particle charge; here == proton */
-    double const DELTA   = 0.0; /* momentum deviation from reference particle */
+    /* ********************************************************************* */
+    /* Prepare particle data: */
 
-    std::vector< dt::Particle > particles_host( NUM_PARTICLES );
-
-    dt::uint64_type particle_id = 0u;
-    for( auto& p : particles_host )
-    {
-        p.init( MASS0, CHARGE0, P0_C, DELTA );
-        p.id = particle_id++;
-    }
+    std::vector< dt::Particle > particles_host;
+    dt::Particles_load( particles_host, NUM_PARTICLES, path_to_particle_data );
 
     /* ********************************************************************* */
     /* Prepare lattice / machine description: */
@@ -298,6 +296,16 @@ int main( int argc, char* argv[] )
     std::cout << "number of particles   : " << NUM_PARTICLES << "\r\n"
               << "number of turns       : " << TRACK_UNTIL_TURN << "\r\n";
 
+    if( !path_to_particle_data.empty() )
+    {
+        std::cout << "particle data         : "
+                  << path_to_particle_data << "\r\n";
+    }
+    else
+    {
+        std::cout << "particle data         : generated\r\n";
+    }
+
     if( !path_to_lattice_data.empty() )
     {
         std::cout << "lattice               : "
@@ -317,6 +325,7 @@ int main( int argc, char* argv[] )
     std::cout << "DEVICE                : " << pci_bus_id_str
               << " ( " << props.name << " )\r\n"
               << "NUM_OF_BLOCKS         : " << GRID_SIZE << "\r\n"
+              << "MIN_GRID_SIZE         : " << MIN_GRID_SIZE << "\r\n"
               << "THREADS_PER_BLOCK     : " << BLOCK_SIZE << "\r\n";
 
     /* Prepare cuda events to estimate the elapsed wall time */
@@ -409,4 +418,3 @@ int main( int argc, char* argv[] )
 
     return 0;
 }
-
