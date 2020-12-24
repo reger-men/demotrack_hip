@@ -1,5 +1,5 @@
-#ifndef DEMOTRACK_CUDA_BEAM_ELEMENTS_H__
-#define DEMOTRACK_CUDA_BEAM_ELEMENTS_H__
+#ifndef DEMOTRACK_HIP_BEAM_ELEMENTS_H__
+#define DEMOTRACK_HIP_BEAM_ELEMENTS_H__
 
 #include <cmath>
 #include <hip/hip_runtime.h>
@@ -290,4 +290,4 @@ namespace demotrack
     };
 }
 
-#endif /* DEMOTRACK_CUDA_BEAM_ELEMENTS_H__ */
+#endif /* DEMOTRACK_HIP_BEAM_ELEMENTS_H__ */

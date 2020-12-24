@@ -1,5 +1,5 @@
-#ifndef DEMOTRACK_CUDA_BEAM_FIELDS_H__
-#define DEMOTRACK_CUDA_BEAM_FIELDS_H__
+#ifndef DEMOTRACK_HIP_BEAM_FIELDS_H__
+#define DEMOTRACK_HIP_BEAM_FIELDS_H__
 
 #include <cmath>
 
@@ -309,4 +309,4 @@ namespace demotrack
 
 }
 
-#endif /* DEMOTRACK_CUDA_BEAM_FIELDS_H__ */
+#endif /* DEMOTRACK_HIP_BEAM_FIELDS_H__ */

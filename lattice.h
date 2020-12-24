@@ -1,5 +1,5 @@
-#ifndef DEMOTRACK_CUDA_FODO_LATTICE_H__
-#define DEMOTRACK_CUDA_FODO_LATTICE_H__
+#ifndef DEMOTRACK_HIP_FODO_LATTICE_H__
+#define DEMOTRACK_HIP_FODO_LATTICE_H__
 
 #include <algorithm>
 
@@ -175,4 +175,4 @@ namespace demotrack
     }
 }
 
-#endif /* DEMOTRACK_CUDA_FODO_LATTICE_H__ */
+#endif /* DEMOTRACK_HIP_FODO_LATTICE_H__ */

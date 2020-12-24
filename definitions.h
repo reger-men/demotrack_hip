@@ -1,5 +1,5 @@
-#ifndef DEMOTRACK_CUDA_DEFINITIONS_H__
-#define DEMOTRACK_CUDA_DEFINITIONS_H__
+#ifndef DEMOTRACK_HIP_DEFINITIONS_H__
+#define DEMOTRACK_HIP_DEFINITIONS_H__
 
 #include <hip/hip_runtime.h>
 
@@ -45,4 +45,4 @@ namespace demotrack
     using size_type = uint64_type;
 }
 
-#endif /* DEMOTRACK_CUDA_DEFINITIONS_H__ */
+#endif /* DEMOTRACK_HIP_DEFINITIONS_H__ */

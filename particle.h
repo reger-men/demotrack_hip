@@ -1,5 +1,5 @@
-#ifndef DEMOTRACK_CUDA_PARTICLE_H__
-#define DEMOTRACK_CUDA_PARTICLE_H__
+#ifndef DEMOTRACK_HIP_PARTICLE_H__
+#define DEMOTRACK_HIP_PARTICLE_H__
 
 #include <cmath>
 #include "definitions.h"
@@ -99,4 +99,4 @@ namespace demotrack
 
 }
 
-#endif /* DEMOTRACK_CUDA_PARTICLE_H__ */
+#endif /* DEMOTRACK_HIP_PARTICLE_H__ */
