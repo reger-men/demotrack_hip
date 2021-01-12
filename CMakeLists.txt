@@ -32,7 +32,7 @@ find_package( HIP REQUIRED )
 # ******************************************************************************
 # demo applications
 
-set( CUDA_SM_ARCH "sm_35" )
+set( CLANG_MCPU_ARCH "gfx900" ) #--amdgpu-target=${CLANG_MCPU_ARCH}
 
 set( CMAKE_POSITION_INDEPENDENT_CODE ON )
 set( CMAKE_CXX_STANDARD 11 )
@@ -48,12 +48,12 @@ include_directories( ${CMAKE_SOURCE_DIR} )
 set( COMMON_HEADERS definitions.h beam_elements.h beamfields.h config.h
                     lattice.h particle.h )
 
-set( HIP_NVCC_FLAGS "-arch=${CUDA_SM_ARCH};-fmad=false;-lineinfo;-D_FORCE_INLINES" )
-
 HIP_ADD_EXECUTABLE( demo01_sc0 demo01.cpp ${COMMON_HEADERS} )
+target_compile_options( demo01_sc0 PRIVATE -fno-fast-math )
 target_link_libraries( demo01_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
 
 HIP_ADD_EXECUTABLE( demo02_sc0 demo02.cpp ${COMMON_HEADERS} )
+target_compile_options( demo02_sc0 PRIVATE -fno-fast-math )
 target_link_libraries( demo02_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
 
 # ------------------------------------------------------------------------------
@@ -61,12 +61,15 @@ target_link_libraries( demo02_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
 #         BUT: tracking with thread-local / private copy of the particles,
 #              i.e. avoiding the frequent global memory accesses
 
-set( HIP_NVCC_FLAGS "-arch=${CUDA_SM_ARCH};-fmad=false;-lineinfo;-D_FORCE_INLINES" )
-set( HIP_NVCC_FLAGS "${HIP_NVCC_FLAGS};-DDEMOTRACK_ENABLE_BEAMFIELDS" )
+set( MY_HIPCC_FLAGS "${MY_HIPCC_FLAGS};-DDEMOTRACK_ENABLE_BEAMFIELDS=1" )
 
 HIP_ADD_EXECUTABLE( demo01_sc1 demo01.cpp ${COMMON_HEADERS} )
 target_link_libraries( demo01_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
+target_compile_options( demo01_sc1 PRIVATE -fno-fast-math )
+target_compile_definitions( demo01_sc1 PRIVATE -DDEMOTRACK_ENABLE_BEAMFIELDS=1 )
 
-HIP_ADD_EXECUTABLE( demo02_sc1 demo02.cpp ${COMMON_HEADERS} )
+HIP_ADD_EXECUTABLE( demo02_sc1 demo02.cpp ${COMMON_HEADERS}
+                    HIPCC_OPTIONS ${MY_HIPCC_FLAGS} )
 target_link_libraries( demo02_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
-
+target_compile_options( demo02_sc1 PRIVATE -fno-fast-math )
+target_compile_definitions( demo02_sc1 PRIVATE -DDEMOTRACK_ENABLE_BEAMFIELDS=1 )
