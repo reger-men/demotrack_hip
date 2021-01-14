@@ -1,8 +1,18 @@
 cmake_minimum_required( VERSION 3.11 FATAL_ERROR )
-project( demotrack_cuda_cxx LANGUAGES C CXX )
+project( demotrack_hip_cxx LANGUAGES C CXX )
 
-option( USE_BLOCKSIZE_CALCULATOR "Use blocksize calculator" OFF )
-set( DEMOTRACK_DEFAULT_BLOCK_SIZE "512" CACHE STRING "Default grid block size" )
+if( NOT CMAKE_BUILD_TYPE )
+  set( CMAKE_BUILD_TYPE "Release" CACHE STRING
+       "Build type [Debug ReleaseRelWithDebInfo MinSizeRel]" FORCE )
+endif()
+
+if( EXISTS ${CMAKE_SOURCE_DIR}/Settings.cmake )
+    message( STATUS "loading custom settings file ${CMAKE_SOURCE_DIR}/Settings.cmake" )
+    include( ${CMAKE_SOURCE_DIR}/Settings.cmake )
+else()
+    message( STATUS "loading default settings file ${CMAKE_SOURCE_DIR}/Settings.cmake.original" )
+    include( ${CMAKE_SOURCE_DIR}/Settings.cmake.original )
+endif()
 
 if( USE_BLOCKSIZE_CALCULATOR )
     set( DEMOTRACK_USE_BLOCKSIZE_CALCULATOR "1" )
@@ -13,7 +23,7 @@ endif()
 configure_file( config.h.template ${CMAKE_SOURCE_DIR}/config.h @ONLY )
 
 # -------------------------------------------------------------------------------
-# Enable CUDA support
+# Enable HIP support
 
 # Set environment variable CUDA_BIN_PATH to the directory containing nvcc or
 # HIP_ROOT_DIR variable to hint the CUDA install location
@@ -42,11 +52,13 @@ set( CMAKE_CUDA_STANDARD_REQUIRED ON )
 
 include_directories( ${CMAKE_SOURCE_DIR} )
 
-# ------------------------------------------------------------------------------
-# demo01: particles stored in global memory, lattice stored in global memory
-
 set( COMMON_HEADERS definitions.h beam_elements.h beamfields.h config.h
                     lattice.h particle.h )
+
+add_subdirectory( tools )
+
+# ------------------------------------------------------------------------------
+# demo01: particles stored in global memory, lattice stored in global memory
 
 HIP_ADD_EXECUTABLE( demo01_sc0 demo01.cpp ${COMMON_HEADERS} )
 target_compile_options( demo01_sc0 PRIVATE -fno-fast-math )
