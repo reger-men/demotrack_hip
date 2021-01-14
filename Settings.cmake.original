@@ -1,0 +1,3 @@
+option( USE_BLOCKSIZE_CALCULATOR "Use blocksize calculator" ON )
+set( DEMOTRACK_DEFAULT_BLOCK_SIZE "512" CACHE STRING "Default grid block size" )
+
