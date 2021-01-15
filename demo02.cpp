@@ -135,7 +135,7 @@ __global__ void Track_particles_until_turn(
                             ( dt::LimitRect const* )&lattice_buffer[ slot_idx ];
 
                         dt::uint64_type const next_slot_idx =
-                            elem->track( *p, slot_idx );
+                            elem->track( p, slot_idx );
 
                         slot_idx = next_slot_idx;
                         break;
@@ -147,7 +147,7 @@ __global__ void Track_particles_until_turn(
                             ( dt::LimitEllipse const* )&lattice_buffer[ slot_idx ];
 
                         dt::uint64_type const next_slot_idx =
-                            elem->track( *p, slot_idx );
+                            elem->track( p, slot_idx );
 
                         slot_idx = next_slot_idx;
                         break;
@@ -159,7 +159,7 @@ __global__ void Track_particles_until_turn(
                             ( dt::LimitRectEllipse const* )&lattice_buffer[ slot_idx ];
 
                         dt::uint64_type const next_slot_idx =
-                            elem->track( *p, slot_idx );
+                            elem->track( p, slot_idx );
 
                         slot_idx = next_slot_idx;
                         break;
@@ -171,7 +171,7 @@ __global__ void Track_particles_until_turn(
                             ( dt::DipoleEdge const* )&lattice_buffer[ slot_idx ];
 
                         dt::uint64_type const next_slot_idx =
-                            elem->track( *p, slot_idx );
+                            elem->track( p, slot_idx );
 
                         slot_idx = next_slot_idx;
                         break;
