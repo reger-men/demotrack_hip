@@ -22,66 +22,97 @@ endif()
 
 configure_file( config.h.template ${CMAKE_SOURCE_DIR}/config.h @ONLY )
 
-# -------------------------------------------------------------------------------
-# Enable HIP support
+##### Detect enabled target arch ####
+# This shhould passed as arg, so here it hardcoded. FIX-ME
+set(ENABLE_HIP "ON")
 
-# Set environment variable CUDA_BIN_PATH to the directory containing nvcc or
-# HIP_ROOT_DIR variable to hint the CUDA install location
-
-if(NOT DEFINED HIP_PATH)
-    if(NOT DEFINED ENV{HIP_PATH})
-        set(HIP_PATH "/opt/rocm/hip" CACHE PATH "Path to which HIP has been installed")
-    else()
-        set(HIP_PATH $ENV{HIP_PATH} CACHE PATH "Path to which HIP has been installed")
-    endif()
+#CUDA
+if(ENABLE_CUDA)
+  #Do CUDA stuff
 endif()
 
-set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
-find_package( HIP REQUIRED )
+#OpenCL
+if(ENABLE_OPENCL)
+  #Do OCL stuff
+  find_package(OpenCL)
+endif()
 
-# ******************************************************************************
-# demo applications
+#HIP
+if(ENABLE_HIP)
+  # -------------------------------------------------------------------------------
+  # Enable HIP support
+  
+  # Set environment variable CUDA_BIN_PATH to the directory containing nvcc or
+  # HIP_ROOT_DIR variable to hint the CUDA install location
+  
+  if(NOT DEFINED HIP_PATH)
+      if(NOT DEFINED ENV{HIP_PATH})
+          set(HIP_PATH "/opt/rocm/hip" CACHE PATH "Path to which HIP has been installed")
+      else()
+          set(HIP_PATH $ENV{HIP_PATH} CACHE PATH "Path to which HIP has been installed")
+      endif()
+  endif()
+  
+  set(CMAKE_MODULE_PATH "${HIP_PATH}/cmake" ${CMAKE_MODULE_PATH})
+  find_package( HIP REQUIRED )
+  
+  if(hip_FOUND)
+    set(HIP_ENABLED ON)
+    message(STATUS "HIP Found (${hip_HIPCC_EXECUTABLE})")
+    set(HIP_CMAKE_CXX_FLAGS "-fcuda-flush-denormals-to-zero -Wno-invalid-command-line-argument -Wno-unused-command-line-argument -Wno-invalid-constexpr -Wno-ignored-optimization-argument -Wno-unused-private-field")
+    if(HIP_AMDGPUTARGET)
+      set(HIP_CMAKE_CXX_FLAGS "${HIP_CMAKE_CXX_FLAGS} --amdgpu-target=${HIP_AMDGPUTARGET}")
+    else()
+      set(HIP_CMAKE_CXX_FLAGS "${HIP_CMAKE_CXX_FLAGS} --amdgpu-target=gfx906")
+    endif()
+  endif()
 
-set( CLANG_MCPU_ARCH "gfx900" ) #--amdgpu-target=${CLANG_MCPU_ARCH}
+  # ******************************************************************************
+  # demo applications
+  
+  #set( CLANG_MCPU_ARCH "gfx900" ) #--amdgpu-target=${CLANG_MCPU_ARCH}
+  
+  set( CMAKE_POSITION_INDEPENDENT_CODE ON )
+  set( CMAKE_CXX_STANDARD 11 )
+  set( CMAKE_CXX_STANDARD_REQUIRED ON )
+  set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_CMAKE_CXX_FLAGS} -fno-gpu-rdc")
+  message(STATUS "Building demo with HIP support ${HIP_AMDGPUTARGET}")
 
-set( CMAKE_POSITION_INDEPENDENT_CODE ON )
-set( CMAKE_CXX_STANDARD 11 )
-set( CMAKE_CXX_STANDARD_REQUIRED ON )
-set( CMAKE_CUDA_STANDARD 11 )
-set( CMAKE_CUDA_STANDARD_REQUIRED ON )
 
-include_directories( ${CMAKE_SOURCE_DIR} )
-
-set( COMMON_HEADERS definitions.h beam_elements.h beamfields.h config.h
-                    lattice.h particle.h )
-
-add_subdirectory( tools )
-
-# ------------------------------------------------------------------------------
-# demo01: particles stored in global memory, lattice stored in global memory
-
-HIP_ADD_EXECUTABLE( demo01_sc0 demo01.cpp ${COMMON_HEADERS} )
-target_compile_options( demo01_sc0 PRIVATE -fno-fast-math )
-target_link_libraries( demo01_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
-
-HIP_ADD_EXECUTABLE( demo02_sc0 demo02.cpp ${COMMON_HEADERS} )
-target_compile_options( demo02_sc0 PRIVATE -fno-fast-math )
-target_link_libraries( demo02_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
-
-# ------------------------------------------------------------------------------
-# demo02: particles stored in global memory, lattice stored in global memory
-#         BUT: tracking with thread-local / private copy of the particles,
-#              i.e. avoiding the frequent global memory accesses
-
-set( MY_HIPCC_FLAGS "${MY_HIPCC_FLAGS};-DDEMOTRACK_ENABLE_BEAMFIELDS=1" )
-
-HIP_ADD_EXECUTABLE( demo01_sc1 demo01.cpp ${COMMON_HEADERS} )
-target_link_libraries( demo01_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
-target_compile_options( demo01_sc1 PRIVATE -fno-fast-math )
-target_compile_definitions( demo01_sc1 PRIVATE -DDEMOTRACK_ENABLE_BEAMFIELDS=1 )
-
-HIP_ADD_EXECUTABLE( demo02_sc1 demo02.cpp ${COMMON_HEADERS}
-                    HIPCC_OPTIONS ${MY_HIPCC_FLAGS} )
-target_link_libraries( demo02_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
-target_compile_options( demo02_sc1 PRIVATE -fno-fast-math )
-target_compile_definitions( demo02_sc1 PRIVATE -DDEMOTRACK_ENABLE_BEAMFIELDS=1 )
+  
+  include_directories( ${CMAKE_SOURCE_DIR} )
+  
+  set( COMMON_HEADERS definitions.h beam_elements.h beamfields.h config.h
+                      lattice.h particle.h )
+  
+  add_subdirectory( tools )
+  
+  # ------------------------------------------------------------------------------
+  # demo01: particles stored in global memory, lattice stored in global memory
+  
+  HIP_ADD_EXECUTABLE( demo01_sc0 demo01.cpp ${COMMON_HEADERS} )
+  target_compile_options( demo01_sc0 PRIVATE -fno-fast-math )
+  target_link_libraries( demo01_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
+  
+  HIP_ADD_EXECUTABLE( demo02_sc0 demo02.cpp ${COMMON_HEADERS} )
+  target_compile_options( demo02_sc0 PRIVATE -fno-fast-math )
+  target_link_libraries( demo02_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
+  
+  # ------------------------------------------------------------------------------
+  # demo02: particles stored in global memory, lattice stored in global memory
+  #         BUT: tracking with thread-local / private copy of the particles,
+  #              i.e. avoiding the frequent global memory accesses
+  
+  set( MY_HIPCC_FLAGS "${MY_HIPCC_FLAGS};-DDEMOTRACK_ENABLE_BEAMFIELDS=1" )
+  
+  HIP_ADD_EXECUTABLE( demo01_sc1 demo01.cpp ${COMMON_HEADERS} )
+  target_link_libraries( demo01_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
+  target_compile_options( demo01_sc1 PRIVATE -fno-fast-math )
+  target_compile_definitions( demo01_sc1 PRIVATE -DDEMOTRACK_ENABLE_BEAMFIELDS=1 )
+  
+  HIP_ADD_EXECUTABLE( demo02_sc1 demo02.cpp ${COMMON_HEADERS}
+                      HIPCC_OPTIONS ${MY_HIPCC_FLAGS} )
+  target_link_libraries( demo02_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
+  target_compile_options( demo02_sc1 PRIVATE -fno-fast-math )
+  target_compile_definitions( demo02_sc1 PRIVATE -DDEMOTRACK_ENABLE_BEAMFIELDS=1 )
+endif()

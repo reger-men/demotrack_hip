@@ -6,6 +6,7 @@
 #include <vector>
 
 #include <hip/hip_runtime.h>
+#include "hip/hip_ext.h"
 
 #include "definitions.h"
 #include "config.h"
@@ -15,6 +16,46 @@
 #include "beamfields.h"
 #endif /* DEMOTRACK_ENABLE_BEAMFIELDS == 1 */
 #include "lattice.h"
+
+bool event_timing = false;
+
+/********************* UTILS *******************************************/
+#define check_error(status)                                                    \
+  do {                                                                         \
+    hipError_t err = status;                                                   \
+    if (err != hipSuccess) {                                                   \
+      std::cerr << "Error: " << hipGetErrorString(err) << std::endl;           \
+      exit(err);                                                               \
+    }                                                                          \
+  } while(0)
+
+#define GPUInfo(string, ...)            \
+    {                                     \
+      printf(string "\n", ##__VA_ARGS__); \
+    }
+
+#define GPUFailedMsg(x) GPUFailedMsgA(x, __FILE__, __LINE__)
+#define GPUFailedMsgI(x) GPUFailedMsgAI(x, __FILE__, __LINE__)
+#define GPUError(...) GPUInfo(__VA_ARGS__)
+
+static int GPUFailedMsgAI(const long long int error, const char* file, int line)
+{
+  // Check for HIP Error and in the case of an error display the corresponding error string
+  if (error == hipSuccess) {
+    return (0);
+  }
+  GPUError("HIP Error: %lld / %s (%s:%d)", error, hipGetErrorString((hipError_t)error), file, line);
+  return 1;
+}
+
+static void GPUFailedMsgA(const long long int error, const char* file, int line)
+{
+  if (GPUFailedMsgAI(error, file, line)) {
+    throw std::runtime_error("HIP Failure");
+  }
+}
+
+/* ***************************************************************** */
 
 __global__ void Track_particles_until_turn(
     demotrack::Particle* particle_set,
@@ -213,8 +254,22 @@ __global__ void Track_particles_until_turn(
     }
 }
 
+void parseArguments(int argc, char *argv[])
+{
+  for (int i = 1; i < argc; i++)
+  { 
+    if (!std::string("--event-timing").compare(argv[i]) ||
+             !std::string("-e").compare(argv[i]))
+    {
+      event_timing = true;
+    }
+  }
+}
+
+
 int main( int argc, char* argv[] )
 {
+    parseArguments(argc, argv);
     namespace dt = demotrack;
 
     /* ********************************************************************* */
@@ -265,6 +320,35 @@ int main( int argc, char* argv[] )
                   << std::endl;
     }
 
+    /********************************************************************** */
+    /* Debug functions */
+    hipDeviceProp_t hipDeviceProp;
+    int mDeviceId = 0; //TODO fix-me
+    int debugLevel = 1;
+
+    GPUFailedMsgI(hipGetDeviceProperties(&hipDeviceProp, mDeviceId));
+
+
+    if (debugLevel >= 1) {
+      GPUInfo("Using HIP Device %s with Properties:", hipDeviceProp.name);
+      GPUInfo("\ttotalGlobalMem = %lld", (unsigned long long int)hipDeviceProp.totalGlobalMem);
+      GPUInfo("\tsharedMemPerBlock = %lld", (unsigned long long int)hipDeviceProp.sharedMemPerBlock);
+      GPUInfo("\tregsPerBlock = %d", hipDeviceProp.regsPerBlock);
+      GPUInfo("\twarpSize = %d", hipDeviceProp.warpSize);
+      GPUInfo("\tmaxThreadsPerBlock = %d", hipDeviceProp.maxThreadsPerBlock);
+      GPUInfo("\tmaxThreadsDim = %d %d %d", hipDeviceProp.maxThreadsDim[0], hipDeviceProp.maxThreadsDim[1], hipDeviceProp.maxThreadsDim[2]);
+      GPUInfo("\tmaxGridSize = %d %d %d", hipDeviceProp.maxGridSize[0], hipDeviceProp.maxGridSize[1], hipDeviceProp.maxGridSize[2]);
+      GPUInfo("\ttotalConstMem = %lld", (unsigned long long int)hipDeviceProp.totalConstMem);
+      GPUInfo("\tmajor = %d", hipDeviceProp.major);
+      GPUInfo("\tminor = %d", hipDeviceProp.minor);
+      GPUInfo("\tclockRate = %d", hipDeviceProp.clockRate);
+      GPUInfo("\tmemoryClockRate = %d", hipDeviceProp.memoryClockRate);
+      GPUInfo("\tmultiProcessorCount = %d", hipDeviceProp.multiProcessorCount);
+      GPUInfo("\tPCIBusID = %d", hipDeviceProp.pciBusID);
+      GPUInfo(" ");
+    }
+    
+
     /* ********************************************************************* */
     /* Prepare particle data: */
 
@@ -309,18 +393,24 @@ int main( int argc, char* argv[] )
 
     int BLOCK_SIZE = 0;
     int MIN_GRID_SIZE = 0;
+    int MAX_GRID_SIZE = 0;
 
     #if defined( DEMOTRACK_HIP_CALCULATE_BLOCKSIZE ) && \
                ( DEMOTRACK_HIP_CALCULATE_BLOCKSIZE == 1 )
 
-    status = ::hipOccupancyMaxPotentialBlockSize(
-        &MIN_GRID_SIZE, /* -> minimum grid size needed for max occupancy */
-        &BLOCK_SIZE, /* -> estimated optimal block size */
-        Track_particles_until_turn, /* the kernel */
-        0u, /* -> dynamic shared memory per block required [bytes] */
-        0u /* -> max block size limit for the kernel; 0 == no limit */ );
+    //status = ::hipOccupancyMaxPotentialBlockSize(
+    //    &MIN_GRID_SIZE, /* -> minimum grid size needed for max occupancy */
+    //    &BLOCK_SIZE, /* -> estimated optimal block size */
+    //    Track_particles_until_turn, /* the kernel */
+    //    0u, /* -> dynamic shared memory per block required [bytes] */
+    //    0u /* -> max block size limit for the kernel; 0 == no limit */ );
 
-    assert( status == hipSuccess );
+    //assert( status == hipSuccess );
+
+    GPUFailedMsg(hipOccupancyMaxPotentialBlockSize(&MIN_GRID_SIZE, &BLOCK_SIZE, Track_particles_until_turn, 0, 0));
+    GPUFailedMsg(hipOccupancyMaxActiveBlocksPerMultiprocessor(&MAX_GRID_SIZE, Track_particles_until_turn, BLOCK_SIZE, 0));
+
+
 
     #elif defined( DEMOTRACK_DEFAULT_BLOCK_SIZE ) && \
                  ( DEMOTRACK_DEFAULT_BLOCK_SIZE > 0 )
@@ -335,6 +425,8 @@ int main( int argc, char* argv[] )
 
     assert( BLOCK_SIZE > 0 );
     int const GRID_SIZE = ( NUM_PARTICLES + BLOCK_SIZE - 1 ) / BLOCK_SIZE;
+
+    GPUInfo("Kernel: %50s Block size: %4d, Maximum active blocks: %3d, Suggested blocks: %3d", "Track_particles_until_turn",BLOCK_SIZE,MAX_GRID_SIZE,MIN_GRID_SIZE);
 
     /* ******************************************************************** */
     /* Run kernel: */
@@ -409,27 +501,32 @@ int main( int argc, char* argv[] )
     status = ::hipEventCreate( &stop );
     assert( status == hipSuccess );
 
-    status = ::hipEventRecord( start );
-    assert( status == hipSuccess );
-
     /* Run kernel */
+    if(!event_timing){
+      status = ::hipEventRecord( start );
+      assert( status == hipSuccess );
 
-    hipLaunchKernelGGL(Track_particles_until_turn, dim3(GRID_SIZE), dim3(BLOCK_SIZE ), 0, 0,
-        particles_dev, NUM_PARTICLES, lattice_dev, LATTICE_SIZE,
-            TRACK_UNTIL_TURN );
-    status = ::hipDeviceSynchronize();
+      hipLaunchKernelGGL(Track_particles_until_turn, dim3(GRID_SIZE), dim3(BLOCK_SIZE ), 0, 0,
+          particles_dev, NUM_PARTICLES, lattice_dev, LATTICE_SIZE, TRACK_UNTIL_TURN );
+      status = ::hipDeviceSynchronize();
 
-    /* Estimate wall time */
+      /* Estimate wall time */
+      status = ::hipEventRecord( stop );
+      assert( status == hipSuccess );
 
-    status = ::hipEventRecord( stop );
-    assert( status == hipSuccess );
+      status = ::hipEventSynchronize( stop );
+      assert( status == hipSuccess );
 
-    status = ::hipEventSynchronize( stop );
-    assert( status == hipSuccess );
+    }else{
+      GPUInfo("Event Timing enabled...");   
+      hipExtLaunchKernelGGL(Track_particles_until_turn, dim3(GRID_SIZE), dim3(BLOCK_SIZE ), 0, 0,  start, stop, 0,
+			       particles_dev, NUM_PARTICLES, lattice_dev, LATTICE_SIZE, TRACK_UNTIL_TURN);
+      check_error(hipEventSynchronize(stop));
+    }
+
 
     float wtime = 0.0;
-    status = ::hipEventElapsedTime( &wtime, start, stop );
-    assert( status == hipSuccess );
+    check_error(hipEventElapsedTime( &wtime, start, stop ));
 
     std::cout << "-------------------------------------------------------\r\n"
               << "Elapsed time          : " << wtime << " msec total \r\n"
