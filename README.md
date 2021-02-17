@@ -3,6 +3,16 @@ Hip Version of the demotrack repository
 
 ## Build instructions
 
+Building for NVIDIA:
+```
+git clone https://github.com/martinschwinzerl/demotrack_hip.git
+cd demotrack_hip
+mkdir build
+cd build
+HIP_PLATFORM=nvcc CXX=hipcc cmake -DHIP_AMDGPUTARGET=compute_70  ..
+make
+```
+
 Building for AMD:
 ```
 git clone https://github.com/martinschwinzerl/demotrack_hip.git
