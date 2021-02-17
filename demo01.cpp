@@ -6,7 +6,9 @@
 #include <vector>
 
 #include <hip/hip_runtime.h>
+#ifndef __HIP_PLATFORM_NVCC__
 #include "hip/hip_ext.h"
+#endif
 
 #include "definitions.h"
 #include "config.h"
@@ -518,10 +520,12 @@ int main( int argc, char* argv[] )
       assert( status == hipSuccess );
 
     }else{
+#ifndef __HIP_PLATFORM_NVCC__	    
       GPUInfo("Event Timing enabled...");   
       hipExtLaunchKernelGGL(Track_particles_until_turn, dim3(GRID_SIZE), dim3(BLOCK_SIZE ), 0, 0,  start, stop, 0,
 			       particles_dev, NUM_PARTICLES, lattice_dev, LATTICE_SIZE, TRACK_UNTIL_TURN);
       check_error(hipEventSynchronize(stop));
+#endif      
     }
 
 

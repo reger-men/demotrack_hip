@@ -61,9 +61,7 @@ if(ENABLE_HIP)
     message(STATUS "HIP Found (${hip_HIPCC_EXECUTABLE})")
     #set(HIP_CMAKE_CXX_FLAGS "-fcuda-flush-denormals-to-zero -Wno-invalid-command-line-argument -Wno-unused-command-line-argument -Wno-invalid-constexpr -Wno-ignored-optimization-argument -Wno-unused-private-field")
 
-    message(STATUS "xxxxxxxxxxxxxxxxxxxxxxxx=${HIP_AMDGPUTARGET}")
     if(${HIP_AMDGPUTARGET})
-	     message(STATUS "xxxxxxxxxyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyxxxxxxxxxxxxxxx=${HIP_AMDGPUTARGET}")
       if("${HIP_PLATFORM}" STREQUAL hcc)	    
         set(HIP_CMAKE_CXX_FLAGS "${HIP_CMAKE_CXX_FLAGS} --amdgpu-target=${HIP_AMDGPUTARGET}")
       elseif("${HIP_PLATFORM}" STREQUAL nvcc)
@@ -73,7 +71,7 @@ if(ENABLE_HIP)
       if("${HIP_PLATFORM}" STREQUAL hcc)	    
         set(HIP_CMAKE_CXX_FLAGS "${HIP_CMAKE_CXX_FLAGS} --amdgpu-target=gfx906")
       elseif("${HIP_PLATFORM}" STREQUAL nvcc)
-        set(HIP_CMAKE_CXX_FLAGS "${HIP_CMAKE_CXX_FLAGS} -arch=SM_70")
+        set(HIP_CMAKE_CXX_FLAGS "${HIP_CMAKE_CXX_FLAGS} -arch=compute_70")
       endif()	
     endif()
   endif()
@@ -83,13 +81,12 @@ if(ENABLE_HIP)
   
   #set( CLANG_MCPU_ARCH "gfx900" ) #--amdgpu-target=${CLANG_MCPU_ARCH}
   
-  set( CMAKE_POSITION_INDEPENDENT_CODE ON )
-  set( CMAKE_CXX_STANDARD 11 )
   set( CMAKE_CXX_STANDARD_REQUIRED ON )
 
-  message(STATUS "xxxxxxxxxxxxxxxxxxxxxxxx?${HIP_PLATFORM}")
   if("${HIP_PLATFORM}" STREQUAL hcc)
-    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_CMAKE_CXX_FLAGS} -fno-gpu-rdc")
+    set( CMAKE_POSITION_INDEPENDENT_CODE ON )
+    set( CMAKE_CXX_STANDARD 11 )
+    set( CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${HIP_CMAKE_CXX_FLAGS} -fno-gpu-rdc -fno-fast-math")
     message(STATUS "Building demo with HIP support ${HIP_AMDGPUTARGET}")
   elseif("${HIP_PLATFORM}" STREQUAL nvcc)
     set(HIP_NVCC_FLAG "-x cu -arch=${HIP_AMDGPUTARGET}")
@@ -97,7 +94,6 @@ if(ENABLE_HIP)
     message(STATUS "Building demo CUDA with HIP support ${HIP_AMDGPUTARGET}")
   endif()
 
-  
   include_directories( ${CMAKE_SOURCE_DIR} )
   
   set( COMMON_HEADERS definitions.h beam_elements.h beamfields.h config.h
@@ -109,11 +105,11 @@ if(ENABLE_HIP)
   # demo01: particles stored in global memory, lattice stored in global memory
   
   HIP_ADD_EXECUTABLE( demo01_sc0 demo01.cpp ${COMMON_HEADERS} )
-  target_compile_options( demo01_sc0 PRIVATE -fno-fast-math )
+  target_compile_options( demo01_sc0 PRIVATE )
   target_link_libraries( demo01_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
   
   HIP_ADD_EXECUTABLE( demo02_sc0 demo02.cpp ${COMMON_HEADERS} )
-  target_compile_options( demo02_sc0 PRIVATE -fno-fast-math )
+  target_compile_options( demo02_sc0 PRIVATE )
   target_link_libraries( demo02_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
   
   # ------------------------------------------------------------------------------
@@ -125,12 +121,12 @@ if(ENABLE_HIP)
   
   HIP_ADD_EXECUTABLE( demo01_sc1 demo01.cpp ${COMMON_HEADERS} )
   target_link_libraries( demo01_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
-  target_compile_options( demo01_sc1 PRIVATE -fno-fast-math )
+  target_compile_options( demo01_sc1 PRIVATE )
   target_compile_definitions( demo01_sc1 PRIVATE -DDEMOTRACK_ENABLE_BEAMFIELDS=1 )
   
   HIP_ADD_EXECUTABLE( demo02_sc1 demo02.cpp ${COMMON_HEADERS}
                       HIPCC_OPTIONS ${MY_HIPCC_FLAGS} )
   target_link_libraries( demo02_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
-  target_compile_options( demo02_sc1 PRIVATE -fno-fast-math )
+  target_compile_options( demo02_sc1 PRIVATE )
   target_compile_definitions( demo02_sc1 PRIVATE -DDEMOTRACK_ENABLE_BEAMFIELDS=1 )
 endif()
