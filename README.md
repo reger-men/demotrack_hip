@@ -9,7 +9,7 @@ git clone https://github.com/martinschwinzerl/demotrack_hip.git
 cd demotrack_hip
 mkdir build
 cd build
-export HIP_PLATFORM=nvcc CXX=hipcc cmake -DHIP_AMDGPUTARGET=compute_70  ..
+export HIP_PLATFORM=nvcc && CXX=hipcc cmake -DHIP_AMDGPUTARGET=compute_70  ..
 make
 ```
 
@@ -19,7 +19,7 @@ git clone https://github.com/martinschwinzerl/demotrack_hip.git
 cd demotrack_hip
 mkdir build
 cd build
-export HIP_PLATFORM=hcc CXX=hipcc cmake -DHIP_AMDGPUTARGET=gfx906 ..
+export HIP_PLATFORM=hcc && CXX=hipcc cmake -DHIP_AMDGPUTARGET=gfx906 ..
 make
 Scanning dependencies of target demo02_sc1
 [ 12%] Building CXX object CMakeFiles/demo02_sc1.dir/demo02.cpp.o
