@@ -7,7 +7,7 @@ HIP_VISIBLE_DEVICES=3 ./demotrack 102400 100 ../data/lhc02/lhc_no_bb_particles.b
 HIP_VISIBLE_DEVICES=3 ./demotrack 102400 100 ../data/full_SIS_lattice/sis100_particles_flat.bin ../data/full_SIS_lattice/sis100_elements_flat.bin -k 1
 
 
-##### Demo01 -k 3 ###########################################################
+##### Demo02 -k 3 ###########################################################
 
 ## fc1 9615.06 msec | fc0 9702.61
 HIP_VISIBLE_DEVICES=3 ./demotrack 102400 100 ../data/lhc02/lhc_no_bb_particles.bin ../data/lhc02/lhc_no_bb_elements.bin -k 3
