@@ -86,14 +86,21 @@ int main( int argc, char* argv[] )
     int MIN_GRID_SIZE = 0;
     int MAX_GRID_SIZE = 0;
 
+
 #if defined( DEMOTRACK_HIP_CALCULATE_BLOCKSIZE ) && ( DEMOTRACK_HIP_CALCULATE_BLOCKSIZE == 1 )
-    GPUFailedMsg(hipOccupancyMaxPotentialBlockSize(&MIN_GRID_SIZE, &BLOCK_SIZE, Track_particles_until_turn, 0, 0));
-    GPUFailedMsg(hipOccupancyMaxActiveBlocksPerMultiprocessor(&MAX_GRID_SIZE, Track_particles_until_turn, BLOCK_SIZE, 0));
+    GPUCheckFail(hipOccupancyMaxPotentialBlockSize(&MIN_GRID_SIZE, &BLOCK_SIZE, Track_particles_until_turn00_01, 0, 0));
+    GPUCheckFail(hipOccupancyMaxActiveBlocksPerMultiprocessor(&MAX_GRID_SIZE, Track_particles_until_turn00_01, BLOCK_SIZE, 0));
+
+    hipFuncAttributes attr{};
+    GPUCheckFail(hipFuncGetAttributes(&attr, reinterpret_cast<const void*>(&Track_particles_until_turn00_01)));
+    GPUInfo("HIP_FUNC_ATTRIBUTE_MAX_THREADS_PER_BLOCK: %d", attr.maxThreadsPerBlock);
 #elif defined( DEMOTRACK_DEFAULT_BLOCK_SIZE ) && ( DEMOTRACK_DEFAULT_BLOCK_SIZE > 0 )
     BLOCK_SIZE = DEMOTRACK_DEFAULT_BLOCK_SIZE;
 #else
     BLOCK_SIZE = 1;
 #endif /* DEMOTRACK_HIP_CALCULATE_BLOCKSIZE */
+
+
 
     assert( BLOCK_SIZE > 0 );
     int const GRID_SIZE = ( NUM_PARTICLES + BLOCK_SIZE - 1 ) / BLOCK_SIZE;
