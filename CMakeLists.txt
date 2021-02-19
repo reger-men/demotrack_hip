@@ -20,7 +20,7 @@ else()
     set( DEMOTRACK_USE_BLOCKSIZE_CALCULATOR "0" )
 endif()
 
-configure_file( config.h.template ${CMAKE_SOURCE_DIR}/config.h @ONLY )
+configure_file( config.h.template ${CMAKE_SOURCE_DIR}/include/config.h @ONLY )
 
 ##### Detect enabled target arch ####
 # This shhould passed as arg, so here it hardcoded. FIX-ME
