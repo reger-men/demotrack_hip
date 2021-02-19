@@ -1,5 +1,5 @@
 cmake_minimum_required( VERSION 3.11 FATAL_ERROR )
-project( demotrack_hip_cxx LANGUAGES C CXX )
+project( demotrack LANGUAGES C CXX )
 
 if( NOT CMAKE_BUILD_TYPE )
   set( CMAKE_BUILD_TYPE "Release" CACHE STRING
@@ -96,39 +96,8 @@ if(ENABLE_HIP)
     message(STATUS "Building demo CUDA with HIP support ${HIP_AMDGPUTARGET}")
   endif()
 
-  include_directories( ${CMAKE_SOURCE_DIR} )
-  
-  set( COMMON_HEADERS definitions.h beam_elements.h beamfields.h config.h
-                      lattice.h particle.h )
-  
+  add_subdirectory(src)
+  include_directories( ${CMAKE_SOURCE_DIR}/include )
   add_subdirectory( tools )
   
-  # ------------------------------------------------------------------------------
-  # demo01: particles stored in global memory, lattice stored in global memory
-  
-  HIP_ADD_EXECUTABLE( demo01_sc0 demo01.cpp ${COMMON_HEADERS} )
-  target_compile_options( demo01_sc0 PRIVATE )
-  target_link_libraries( demo01_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
-  
-  HIP_ADD_EXECUTABLE( demo02_sc0 demo02.cpp ${COMMON_HEADERS} )
-  target_compile_options( demo02_sc0 PRIVATE )
-  target_link_libraries( demo02_sc0 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
-  
-  # ------------------------------------------------------------------------------
-  # demo02: particles stored in global memory, lattice stored in global memory
-  #         BUT: tracking with thread-local / private copy of the particles,
-  #              i.e. avoiding the frequent global memory accesses
-  
-  set( MY_HIPCC_FLAGS "${MY_HIPCC_FLAGS};-DDEMOTRACK_ENABLE_BEAMFIELDS=1" )
-  
-  HIP_ADD_EXECUTABLE( demo01_sc1 demo01.cpp ${COMMON_HEADERS} )
-  target_link_libraries( demo01_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
-  target_compile_options( demo01_sc1 PRIVATE )
-  target_compile_definitions( demo01_sc1 PRIVATE -DDEMOTRACK_ENABLE_BEAMFIELDS=1 )
-  
-  HIP_ADD_EXECUTABLE( demo02_sc1 demo02.cpp ${COMMON_HEADERS}
-                      HIPCC_OPTIONS ${MY_HIPCC_FLAGS} )
-  target_link_libraries( demo02_sc1 PRIVATE ${DEMOTRACK_LINK_LIBRARIES} )
-  target_compile_options( demo02_sc1 PRIVATE )
-  target_compile_definitions( demo02_sc1 PRIVATE -DDEMOTRACK_ENABLE_BEAMFIELDS=1 )
 endif()
