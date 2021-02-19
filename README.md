@@ -5,7 +5,7 @@ Hip Version of the demotrack repository
 
 Building for NVIDIA:
 ```
-git clone https://github.com/martinschwinzerl/demotrack_hip.git
+git clone https://github.com/reger-men/demotrack_hip
 cd demotrack_hip
 mkdir build
 cd build
@@ -15,7 +15,7 @@ make
 
 Building for AMD:
 ```
-git clone https://github.com/martinschwinzerl/demotrack_hip.git
+git clone https://github.com/reger-men/demotrack_hip
 cd demotrack_hip
 mkdir build
 cd build
@@ -37,5 +37,9 @@ Scanning dependencies of target demo01_sc0
 [ 87%] Building CXX object CMakeFiles/demo01_sc0.dir/demo01.cpp.o
 [100%] Linking HIP executable demo01_sc0
 [100%] Built target demo01_sc0
+``` 
+
+Run the test:
+``` 
 ``` 
 
