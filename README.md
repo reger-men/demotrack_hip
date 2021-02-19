@@ -41,5 +41,12 @@ Scanning dependencies of target demo01_sc0
 
 Run the test:
 ``` 
+# space charge enabled with globale memory access
+./demotrack 102400 100 /home/gsi/data/lhc02/lhc_no_bb_particles.bin /home/gsi/data/lhc02/lhc_no_bb_elements.bin -k 1
+./demotrack 102400 100 /home/gsi/data/full_SIS_lattice/sis100_particles_flat.bin /home/gsi/data/full_SIS_lattice/sis100_elements_flat.bin -k 1
+
+# space charge enabled with local memory access
+./demotrack 102400 100 /home/gsi/data/lhc02/lhc_no_bb_particles.bin /home/gsi/data/lhc02/lhc_no_bb_elements.bin -k 3
+./demotrack 102400 100 /home/gsi/data/full_SIS_lattice/sis100_particles_flat.bin /home/gsi/data/full_SIS_lattice/sis100_elements_flat.bin -k 3
 ``` 
 
