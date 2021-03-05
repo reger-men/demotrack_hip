@@ -16,8 +16,8 @@
 
 __global__ 
 //__attribute__((amdgpu_flat_work_group_size(DEMOTRACK_DEFAULT_BLOCK_SIZE, DEMOTRACK_DEFAULT_BLOCK_SIZE)))
-//__launch_bounds__(DEMOTRACK_DEFAULT_BLOCK_SIZE, 1)	
-__attribute__((amdgpu_waves_per_eu(DEMOTRACK_DEFAULT_BLOCK_SIZE/64)))
+__launch_bounds__(DEMOTRACK_DEFAULT_BLOCK_SIZE, 3)	
+//__attribute__((amdgpu_waves_per_eu(DEMOTRACK_DEFAULT_BLOCK_SIZE/64)))
 void Track_particles_until_turn01_01(
     demotrack::Particle* particle_set,
     demotrack::int64_type const num_particles,

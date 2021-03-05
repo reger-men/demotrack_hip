@@ -127,7 +127,7 @@ namespace demotrack
 		//Replace the above loop with this is very EXPANSIVE: req a lot of mem
 		//xl = pow(h,nc-nu)*xl;
 	        
-                #pragma unroll 16		
+                #pragma unroll 8
 		for( int n = nu; n > 0; n-- ){
 			Tx = xh + n * Rx_pre;
 			Ty = yh - n * Ry_pre;
