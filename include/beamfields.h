@@ -44,8 +44,31 @@ namespace demotrack
             return DoublePair{ temp * xx, temp * yy };
         }
 
+	
+	DEMOTRACK_FN 
+		__attribute__((noinline))
+		static DoublePair part_2(DoublePair W, double const x, double const y,
+				double const in_imag, double const in_real, double const _exp, 
+				double const _cos, double const _sin)
+	{
+            if( y == 0.){ W.x = exp( -x * x );}
+
+            if( in_imag < 0. )
+            {
+                W.x =   2. * _exp * _cos - W.x;
+                W.y = - 2. * _exp * _sin - W.y;
+                if( in_real > 0. ) { W.y = -W.y; }
+            }
+            else if( in_real < 0. )
+            {
+                W.y = -W.y;
+            }
+
+            return W;
+	}
+
         DEMOTRACK_FN static DoublePair CERRF(
-            double const in_real, double const in_imag ) noexcept {
+            double const in_real, double const in_imag) noexcept {
 
             using std::fabs;
             using std::pow;
@@ -58,22 +81,25 @@ namespace demotrack
             expression for the electric field of a two-dimensional Gaussian charge
             density", CERN-ISR-TH/80-06; */
 
-            DoublePair W = { 0., 0. };
+	    DoublePair W = { 0., 0. };
 
             double const xLim = double{ 5.33 };
             double const yLim = double{ 4.29 };
             double const a_constant = double{ 1.12837916709551 };
+            
 
             double const x = fabs( in_real );
             double const y = fabs( in_imag );
 
-            double Rx[ 33 ] = { 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-                                0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-                                0., 0., 0., 0., 0., 0., 0., 0., 0. };
+	    double Rx = 0.;
+	    double Ry = 0.;
 
-            double Ry[ 33 ] = { 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-                                0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0., 0.,
-                                0., 0., 0., 0., 0., 0., 0., 0., 0. };
+            double xh;
+            double yh;
+	    double Tx;
+	    double Ty;
+	    double Tn;  
+	    double Saux;
 
             if( ( y < yLim ) && ( x < xLim ) )
             {
@@ -81,29 +107,44 @@ namespace demotrack
                 double const q = ( 1. - y / yLim ) * sqrt( 1.0 - xx * xx );
                 double const h  = 1. / ( 3.2 * q );
                 int const nc = 7 + ( int )( 23. * q );
-
-                double xl = pow( h, ( double )( 1 - nc ) );
-                double const xh = y + 0.5 / h;
-                double const yh = x;
                 int const nu = 10 + ( int )( 21. * q );
 
-                for( int n = nu; n > 0; n-- ){
-                    double const Tx = xh + n * Rx[ n ];
-                    double const Ty = yh - n * Ry[ n ];
-                    double const Tn = Tx * Tx + Ty * Ty;
-                    Rx[ n-1 ] = 0.5 * Tx / Tn;
-                    Ry[ n-1 ] = 0.5 * Ty / Tn;
-                }
-                /* .... */
-                double Sx = 0.;
+                double xl = pow( h, ( double )( 1 - nc ) );
+                xh = y + 0.5 / h;
+                yh = x;
+
+	        double Sx = 0.;
                 double Sy = 0.;
 
-                for( int n = nc ; n > 0 ; n-- ){
-                    double const Saux = Sx + xl;
-                    Sx = Rx[ n - 1 ] * Saux - Ry[ n - 1 ] * Sy;
-                    Sy = Rx[ n - 1 ] * Sy + Ry[ n - 1 ] * Saux;
+		double Rx_pre = 0.;
+		double Ry_pre = 0.;
+
+
+		for( int n = nc ; n > nu ; n-- ){
                     xl = h * xl;
                 };
+
+		//Replace the above loop with this is very EXPANSIVE: req a lot of mem
+		//xl = pow(h,nc-nu)*xl;
+	        
+                #pragma unroll 16		
+		for( int n = nu; n > 0; n-- ){
+			Tx = xh + n * Rx_pre;
+			Ty = yh - n * Ry_pre;
+			Tn = Tx * Tx + Ty * Ty;
+			Rx = 0.5 * Tx / Tn;
+			Ry = 0.5 * Ty / Tn;
+
+			if(n <= nc){
+			  Saux = Sx + xl;
+			  Sx = Rx * Saux - Ry * Sy;
+			  Sy = Rx * Sy + Ry * Saux;
+			  xl = h * xl;
+                        } 
+			Rx_pre = Rx;
+			Ry_pre = Ry;
+		}
+
                 W.x = a_constant * Sx;
                 W.y = a_constant * Sy;
             }
@@ -114,22 +155,26 @@ namespace demotrack
 
                 for( int n = 9 ; n > 0 ; n-- )
                 {
-                    double const Tx = xh + n * Rx[ 0 ];
-                    double const Ty = yh - n * Ry[ 0 ];
-                    double const Tn = Tx * Tx + Ty * Ty;
-                    Rx[ 0 ] = 0.5 * Tx / Tn;
-                    Ry[ 0 ] = 0.5 * Ty / Tn;
+                    Tx = xh + n * Rx;
+                    Ty = yh - n * Ry;
+                    Tn = Tx * Tx + Ty * Ty;
+                    Rx = 0.5 * Tx / Tn;
+                    Ry = 0.5 * Ty / Tn;
                 };
 
-                W.x = a_constant * Rx[ 0 ];
-                W.y = a_constant * Ry[ 0 ];
+                W.x = a_constant * Rx;
+                W.y = a_constant * Ry;
             }
 
-            if( y == 0.){ W.x = exp( -x * x ); }
+	    //return part_2(W,x,y,in_imag,in_real,exp(y * y - x * x), cos( 2. * x * y ), sin( 2. * x * y ));
+
+	     
+            if( y == 0.){ W.x = exp( -x * x );}
+
             if( in_imag < 0. )
             {
-                W.x =   2. * exp( y * y - x * x ) * cos( 2. * x * y ) - W.x;
-                W.y = - 2. * exp( y * y - x * x ) * sin( 2. * x * y ) - W.y;
+                W.x =   2. * exp(y * y - x * x) * cos( 2. * x * y ) - W.x;
+                W.y = - 2. * exp(y * y - x * x) * sin( 2. * x * y ) - W.y;
                 if( in_real > 0. ) { W.y = -W.y; }
             }
             else if( in_real < 0. )
@@ -170,15 +215,14 @@ namespace demotrack
             double const exp_be = exp( - abx * abx / ( 2.0 * sigma_x_squ )
                                        - aby * aby / ( 2.0 * sigma_y_squ ) );
 
+
             if( sigma_x > sigma_y )
             {
                 double const S = sqrt( 2.* ( sigma_x_squ - sigma_y_squ ) );
                 double const fact_be = 1. / ( 2. * EPSILON_0 * SQRT_PI * S );
 
-                DoublePair const w_zeta = this_type::CERRF( abx / S, aby / S );
-                DoublePair const w_eta  = this_type::CERRF(
-                    ( abx * sigma_y ) / ( sigma_x * S ),
-                    ( aby * sigma_x ) / ( sigma_y * S ) );
+                DoublePair const w_zeta = this_type::CERRF( abx / S, aby / S);
+                DoublePair const w_eta  = this_type::CERRF(( abx * sigma_y ) / ( sigma_x * S ),( aby * sigma_x ) / ( sigma_y * S ));
 
                 E.x = fact_be * ( w_zeta.y - w_eta.y * exp_be );
                 E.y = fact_be * ( w_zeta.x - w_eta.x * exp_be );
@@ -187,11 +231,8 @@ namespace demotrack
             {
                 double const S = sqrt( 2. * ( sigma_y_squ - sigma_x_squ ) );
                 double const fact_be = 1. / ( 2. * EPSILON_0 * SQRT_PI * S );
-
-                DoublePair const w_zeta = this_type::CERRF( aby / S, abx / S );
-                DoublePair const w_eta  = this_type::CERRF(
-                    ( aby * sigma_x ) / ( sigma_y * S ),
-                    ( abx * sigma_y ) / ( sigma_x * S ) );
+                DoublePair const w_zeta = this_type::CERRF( aby / S, abx / S);
+                DoublePair const w_eta  = this_type::CERRF(( aby * sigma_x ) / ( sigma_y * S ), ( abx * sigma_y ) / ( sigma_x * S ));
 
                 E.y = fact_be * ( w_zeta.y - w_eta.y * exp_be );
                 E.x = fact_be * ( w_zeta.x - w_eta.x * exp_be );
@@ -306,7 +347,6 @@ namespace demotrack
         double min_sigma_diff;
         double enabled;
     };
-
 }
 
 #endif /* DEMOTRACK_HIP_BEAM_FIELDS_H__ */

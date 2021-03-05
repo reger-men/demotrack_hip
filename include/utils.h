@@ -56,8 +56,10 @@ void parseArguments(int argc, char *argv[])
     }else if(!std::string("-k").compare(argv[i])){
       kernel_version = atoi(argv[++i]);
       new_argc=new_argc-2;
+    }else if(!std::string("-o").compare(argv[i])){
+      path_to_output_data = std::string{ argv[++i]};
+      new_argc=new_argc-2;
     }
-    
   }
   argc = new_argc;
 
@@ -77,12 +79,6 @@ void parseArguments(int argc, char *argv[])
                   path_to_lattice_data = std::string{ argv[ 4 ] };
                   if( path_to_lattice_data.compare( "default" ) == 0 ) {
                       path_to_lattice_data.clear(); }
-                  if( argc >= 6 )
-                  {
-                      path_to_output_data = std::string{ argv[ 5 ] };
-                      if( path_to_output_data.compare( "none" ) == 0 ) {
-                          path_to_output_data.clear(); }
-                  }
               }
           }
       }
